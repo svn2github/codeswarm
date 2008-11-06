@@ -84,13 +84,13 @@ public class SVNHistory extends AbstractSVNHistoryVisitor {
     public boolean handleFetchingLatestRepositoryRevision(Long pRevision) {
         long revision = pRevision.longValue();
         Preferences p = Preferences.userNodeForPackage(SVNHistory.class);
-        long l= p.getLong(this.url+"_lastRevision", -1l);
+        long l= p.getLong(Integer.toString(this.url.hashCode()), -1l);
         if(l==revision){
             LOGGER.log(Level.FINE,"skip fetching {0} (latest revision is {1}) for {2}",new Object[]{String.valueOf(l),revision,this.url});
             return false;
         }else{
             LOGGER.log(Level.FINE, "proceed fetching (latest revision is {0} , cached revision is {1} for repository {2}", new Object[]{String.valueOf(pRevision), String.valueOf(l), this.url});
-            Preferences.userNodeForPackage(SVNHistory.class).putLong(this.url+"_lastRevision", revision);
+            Preferences.userNodeForPackage(SVNHistory.class).putLong(Integer.toString(this.url.hashCode()), revision);
             try {
                 Preferences.userNodeForPackage(SVNHistory.class).flush();
             } catch (BackingStoreException ex) {
@@ -105,8 +105,8 @@ public class SVNHistory extends AbstractSVNHistoryVisitor {
      * @param logEntry the entry to process
      */
     public void handleLogEntry(SVNLogEntry logEntry) {
-        Set keySet = logEntry.getChangedPaths().keySet();
-        Iterator i = keySet.iterator();
+        Set<?> keySet = logEntry.getChangedPaths().keySet();
+        Iterator<?> i = keySet.iterator();
         while(i.hasNext()){
             String key = (String)i.next();
             SVNLogEntryPath entryPath = (SVNLogEntryPath) logEntry.getChangedPaths().get(key);
@@ -123,9 +123,9 @@ public class SVNHistory extends AbstractSVNHistoryVisitor {
             /*
              * keys are changed paths
              */
-            Set changedPathsSet = logEntry.getChangedPaths().keySet();
+            Set<?> changedPathsSet = logEntry.getChangedPaths().keySet();
 
-            for (Iterator changedPaths = changedPathsSet.iterator(); changedPaths.hasNext();) {
+            for (Iterator<?> changedPaths = changedPathsSet.iterator(); changedPaths.hasNext();) {
                 /*
                  * obtains a next SVNLogEntryPath
                  */
