@@ -787,7 +787,7 @@ public class code_swarm extends PApplet {
         n = new FileNode(currentEvent);
         nodes.add(n);
       } else {
-        n.freshen();
+        n.freshen(currentEvent);
       }
 
       // add to color bin
@@ -930,9 +930,8 @@ public class code_swarm extends PApplet {
       String eventDatestr = xml.getStringAttribute("date");
       long eventDate = Long.parseLong(eventDatestr);
       String eventAuthor = xml.getStringAttribute("author");
-      // int eventLinesAdded = xml.getIntAttribute( "linesadded" );
-      // int eventLinesRemoved = xml.getIntAttribute( "linesremoved" );
-      FileEvent evt = new FileEvent(eventDate, eventAuthor, "", eventFilename);
+      int weight = xml.getIntAttribute( "weight", 1 );
+      FileEvent evt = new FileEvent(eventDate, eventAuthor, "", eventFilename, weight);
       eventsQueue.add(evt);
       if (eventsQueue.size() % 100 == 0)
         loadingMessage = "Creating events: " + eventsQueue.size();
@@ -1130,26 +1129,26 @@ public class code_swarm extends PApplet {
     String author;
     String filename;
     String path;
-    int linesadded;
-    int linesremoved;
+    //int linesadded;
+    //int linesremoved;
+    int weight;
 
     /**
      * short constructor with base data
      */
     FileEvent(long datenum, String author, String path, String filename) {
-      this(datenum, author, path, filename, 0, 0);
+      this(datenum, author, path, filename, 1);
     }
 
     /**
-     * constructor with number of modified lines
+     * constructor with weight
      */
-    FileEvent(long datenum, String author, String path, String filename, int linesadded, int linesremoved) {
+    FileEvent(long datenum, String author, String path, String filename, int weight) {
       this.date = new Date(datenum);
       this.author = author;
       this.path = path;
       this.filename = filename;
-      this.linesadded = linesadded;
-      this.linesremoved = linesremoved;
+      this.weight = weight;
     }
 
     /**
@@ -1299,7 +1298,7 @@ public class code_swarm extends PApplet {
     FileNode(FileEvent fe) {
       super(FILE_LIFE_INIT, FILE_LIFE_DECREMENT); // 255, -2
       name = fe.path + fe.filename;
-      touches = 1;
+      touches = fe.weight;
       life = FILE_LIFE_INIT;
       colorMode(RGB);
       minBold = (int)(FILE_LIFE_INIT * ((100.0f - HIGHLIGHT_PCT)/100));
@@ -1346,6 +1345,20 @@ public class code_swarm extends PApplet {
       if (++touches > maxTouches) {
         maxTouches = touches;
       }
+    }
+
+    /**
+     * reset life and add event weight to touches
+     */
+    public void freshen( FileEvent fe ) {
+      life = FILE_LIFE_INIT;
+      touches += fe.weight;
+
+      // do not allow negative touches
+      if ( touches < 0 )
+        touches = 0;
+      if ( touches > maxTouches )
+        maxTouches = touches;
     }
 
     public boolean qualifies() {

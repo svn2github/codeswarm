@@ -5,7 +5,7 @@
 	<event filename="/src/hello1.c" date="0" author="programmer" />
 	<event filename="/docs/COPYING" date="0" author="documenter" />
 	<event filename="/docs/README" date="86400000" author="documenter" />
-	<event filename="/src1/hello1.c" date="86400000" author="programmer" />
+	<event filename="/src1/hello1.c" date="86400000" author="programmer" weight="1000" />
 	<event filename="/src1/hello2.c" date="86400000" author="programmer" />
 	<event filename="/src1/hello3.c" date="86400000" author="programmer" />
 	<event filename="/docs/README" date="156400000" author="documenter" />
@@ -132,7 +132,7 @@
 	<event filename="/src1/hello9.c" date="5325000000" author="programmer" />
 	<event filename="/src1/hello10.c" date="5345000000" author="helper" />
 	<event filename="/src1/hello12.c" date="5345000000" author="helper" />
-	<event filename="/src1/hello1.c" date="5416000000" author="helper" />
+	<event filename="/src1/hello1.c" date="5416000000" author="helper" weight="-800" />
 	<event filename="/docs/README" date="5395000000" author="documenter" />
 	<event filename="/src2/hello13.c" date="5398000000" author="helper" />
 	<event filename="/src2/hello2.c" date="5416000000" author="programmer" />
