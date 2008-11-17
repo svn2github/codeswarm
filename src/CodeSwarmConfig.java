@@ -18,9 +18,12 @@
  */
 
 import java.awt.Color;
-import java.io.*;
-import java.util.Properties;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Enumeration;
+import java.util.Properties;
+
+import org.codeswarm.repositoryevents.EventList;
 
 /**
  * @author Michael Ogawa
@@ -110,6 +113,7 @@ public class CodeSwarmConfig
   public static final String PHYSICS_ENGINE_SELECTION = "PhysicsEngineSelection";
   /** Controls where the config files are for the Physical Engine */
   public static final String PHYSICS_ENGINE_CONF_DIR = "PhysicsEngineConfigDir";
+  public static final String IS_INPUT_SORTED_KEY = "IsInputSorted";
   /** Default regex and rgb values used to match anything not caught in the config file */
   public static String DEFAULT_COLOR_ASSIGN = "\"Misc\",\".*\",128,128,128,128,128,128";
 
@@ -127,7 +131,7 @@ public class CodeSwarmConfig
     p = new Properties( this.createDefaults() );
     p.load( new FileInputStream(configFileName) );
   }
-        
+
   private Properties createDefaults()
   {
     Properties def = new Properties();
@@ -146,9 +150,9 @@ public class CodeSwarmConfig
 
     return def;
   }
-  
+
   /**
-   * 
+   *
    * @return Color
    */
   public Color getBackground()
@@ -170,7 +174,7 @@ public class CodeSwarmConfig
     p.setProperty(INPUT_FILE_KEY, filePath);
   }
   /**
-   * 
+   *
    * @param key
    * @param defValue
    * @return defValue if not found, value stored otherwise (true or false)
@@ -181,7 +185,7 @@ public class CodeSwarmConfig
   }
 
   /**
-   * 
+   *
    * @param key
    * @return String containing value for property or null if not found.
    */
@@ -191,7 +195,7 @@ public class CodeSwarmConfig
   }
 
   /**
-   * 
+   *
    * @param key
    * @param defValue
    * @return defValue if not found, Value of property if found.
@@ -202,7 +206,7 @@ public class CodeSwarmConfig
   }
 
   /**
-   * 
+   *
    * @param key
    * @return value of property if found, 0 if not found.
    */
@@ -210,9 +214,9 @@ public class CodeSwarmConfig
   {
     return Integer.parseInt( p.getProperty(key) );
   }
-  
+
   /**
-   * 
+   *
    * @param key
    * @param defValue
    * @return defValue if not found, Value of property if found.
@@ -221,9 +225,9 @@ public class CodeSwarmConfig
   {
     return Integer.parseInt( p.getProperty(key, String.valueOf(defValue)) );
   }
-  
+
   /**
-   * 
+   *
    * @param key
    * @return value of property if found, 0 if not found.
    */
@@ -231,9 +235,9 @@ public class CodeSwarmConfig
   {
     return Long.parseLong( p.getProperty(key) );
   }
-  
+
   /**
-   * 
+   *
    * @param key
    * @param defValue
    * @return defValue if not found, Value of property if found.
@@ -242,9 +246,9 @@ public class CodeSwarmConfig
   {
     return Long.parseLong( p.getProperty(key, String.valueOf(defValue)) );
   }
-  
+
   /**
-   * 
+   *
    * @param key
    * @return value of property if found, 0 if not found.
    */
@@ -252,9 +256,9 @@ public class CodeSwarmConfig
   {
     return Float.parseFloat( p.getProperty(key) );
   }
-  
+
   /**
-   * 
+   *
    * @param key
    * @param defValue
    * @return defValue if not found, Value of property if found.
@@ -263,9 +267,9 @@ public class CodeSwarmConfig
   {
     return Float.parseFloat( p.getProperty(key, String.valueOf(defValue)) );
   }
-  
+
   /**
-   * 
+   *
    * @param index
    * @return String containing the regex and rgb values used to colorcode nodes, null if not found
    */
@@ -275,7 +279,7 @@ public class CodeSwarmConfig
   }
 
   /**
-   * 
+   *
    * @param str
    * @return Color object constructed from values in str
    */
@@ -292,7 +296,7 @@ public class CodeSwarmConfig
   }
 
   /**
-   * 
+   *
    * @param args
    */
   public static void main(String[] args)
