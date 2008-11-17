@@ -399,10 +399,11 @@ public class code_swarm extends PApplet {
 
     // Create fonts
     String fontName = cfg.getStringProperty(CodeSwarmConfig.FONT_KEY,"SansSerif");
+    String fontNameBold = cfg.getStringProperty(CodeSwarmConfig.FONT_KEY_BOLD,"SansSerif");
     Integer fontSize = cfg.getIntProperty(CodeSwarmConfig.FONT_SIZE, 10);
     Integer fontSizeBold = cfg.getIntProperty(CodeSwarmConfig.FONT_SIZE_BOLD, 14);
     font = createFont(fontName, fontSize);
-    boldFont = createFont(fontName + ".bold", fontSizeBold);
+    boldFont = createFont(fontNameBold, fontSizeBold);
 
     textFont(font);
 
@@ -1423,7 +1424,7 @@ public class code_swarm extends PApplet {
       super(PERSON_LIFE_INIT, PERSON_LIFE_DECREMENT); // -1
       maxSpeed = DEFAULT_PERSON_SPEED;
       name = n;
-      minBold = (int)(PERSON_LIFE_INIT * (1 - (HIGHLIGHT_PCT)/100));
+      minBold = (int)(PERSON_LIFE_INIT * (1 - ((float) HIGHLIGHT_PCT)/100));
       mass = PERSON_MASS; // bigger mass to person then to node, to stabilize them
       touches = 1;
       mPosition.set(mPhysicsEngine.pStartLocation());

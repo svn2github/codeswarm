@@ -47,6 +47,8 @@ public class CodeSwarmConfig
   /** R,G,B Determines the background color */
   public static final String FONT_KEY = "Font";
   /** R,G,B Determines the background color */
+  public static final String FONT_KEY_BOLD = "BoldFont";
+  /** R,G,B Determines the background color */
   public static final String FONT_SIZE = "FontSize";
   /** R,G,B Determines the background color */
   public static final String FONT_SIZE_BOLD = "BoldFontSize";
