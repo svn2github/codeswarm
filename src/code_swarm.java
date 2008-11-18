@@ -508,8 +508,8 @@ public class code_swarm extends PApplet {
       dumpFrame();
     }
 
-    // Stop animation when we run out of data
-    if (eventsQueue.isEmpty()) {
+    // Stop animation when we run out of data AND all nodes are dead
+    if (eventsQueue.isEmpty() && !isThereLife()) {
       // noLoop();
       backgroundExecutor.shutdown();
       try {
@@ -892,6 +892,18 @@ public class code_swarm extends PApplet {
     if (wantToToggle == true) {
       switchPhysicsEngine(toggleDirection);
     }
+  }
+
+  /**
+   * Checks the node list for signs of life.
+   * @return Does life exist?
+   */
+  public boolean isThereLife() {
+    for (FileNode node : nodes) {
+      if (node.life > 0)
+        return true;
+    }
+    return false;
   }
 
   /**
