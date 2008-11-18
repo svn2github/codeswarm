@@ -25,7 +25,6 @@ import java.lang.reflect.Constructor;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Properties;
@@ -71,6 +70,7 @@ public class code_swarm extends PApplet {
   protected static CopyOnWriteArrayList<Edge> edges;
   protected static CopyOnWriteArrayList<PersonNode> people;
   LinkedList<ColorBins> history;
+
   boolean finishedLoading = false;
 
   // Temporary variables
@@ -374,22 +374,24 @@ public class code_swarm extends PApplet {
     frameRate(FRAME_RATE);
 
     // init data structures
-    nodes         = new CopyOnWriteArrayList<FileNode>();
-    edges         = new CopyOnWriteArrayList<Edge>();
-    people        = new CopyOnWriteArrayList<PersonNode>();
-    history       = new LinkedList<ColorBins>();
-    if (isInputSorted)
+    nodes       = new CopyOnWriteArrayList<FileNode>();
+    edges       = new CopyOnWriteArrayList<Edge>();
+    people      = new CopyOnWriteArrayList<PersonNode>();
+    history     = new LinkedList<ColorBins>();
+
+    if (isInputSorted) {
       //If the input is sorted, we only need to store the next few events
       eventsQueue = new ArrayBlockingQueue<FileEvent>(5000);
-    else
+    } else {
       //Otherwise we need to store them all at once in a data structure that will sort them
       eventsQueue = new PriorityBlockingQueue<FileEvent>();
+    }
 
     // Init color map
     initColors();
 
     loadRepEvents(cfg.getStringProperty(CodeSwarmConfig.INPUT_FILE_KEY)); // event formatted (this is the standard)
-    while(!finishedLoading && eventsQueue.isEmpty());
+    while (!finishedLoading && eventsQueue.isEmpty());
     prevDate = eventsQueue.peek().date;
 
     SCREENSHOT_FILE = cfg.getStringProperty(CodeSwarmConfig.SNAPSHOT_LOCATION_KEY);
@@ -507,7 +509,7 @@ public class code_swarm extends PApplet {
     }
 
     // Stop animation when we run out of data
-    if (finishedLoading && eventsQueue.isEmpty()) {
+    if (eventsQueue.isEmpty()) {
       // noLoop();
       backgroundExecutor.shutdown();
       try {
@@ -563,12 +565,9 @@ public class code_swarm extends PApplet {
    *  Draw histogram in lower-left
    */
   public void drawHistory() {
-    Iterator<ColorBins> itr = history.iterator();
     int counter = 0;
 
-    while (itr.hasNext()) {
-      ColorBins cb = itr.next();
-
+    for (ColorBins cb : history) {
       for (int i = 0; i < cb.num; i++) {
         int c = cb.colorList[i];
         stroke(c, 200);
@@ -782,11 +781,11 @@ public class code_swarm extends PApplet {
         currentEvent = eventsQueue.poll();
         if (currentEvent == null)
           return;
-      }
-      else {
-        try {
-          currentEvent = eventsQueue.take();
-        } catch (InterruptedException e) {
+        }
+        else {
+          try {
+            currentEvent = eventsQueue.take();
+          } catch (InterruptedException e) {
           // TODO Auto-generated catch block
           System.out.println("Interrupted while fetching current event from eventsQueue");
           e.printStackTrace();
@@ -941,12 +940,13 @@ public class code_swarm extends PApplet {
    */
   public void loadRepEvents(String filename) {
     final String fullFilename = filename;
+
     Runnable eventLoader = new XMLQueueLoader(fullFilename, eventsQueue, isInputSorted);
 
     if (isInputSorted)
       backgroundExecutor.execute(eventLoader);
     else
-      //we have to load all of the data before wecan continue if it isn't sorted
+      //we have to load all of the data before we can continue if it isn't sorted
       eventLoader.run();
   }
 
@@ -1099,11 +1099,17 @@ public class code_swarm extends PApplet {
         System.exit(1);
       }
       reader.setContentHandler(new DefaultHandler(){
-        public void startElement(String uri, String localName, String name, Attributes atts) throws SAXException {
+        public void startElement(String uri, String localName, String name,
+            Attributes atts) throws SAXException {
           if (name.equals("event")){
             String eventFilename = atts.getValue("filename");
             String eventDatestr = atts.getValue("date");
             long eventDate = Long.parseLong(eventDatestr);
+            String eventWeightStr = atts.getValue("weight");
+            int eventWeight = 1;
+            if (eventWeightStr != null) {
+              eventWeight = Integer.parseInt(eventWeightStr);
+            }
 
             //It's difficult for the user to tell that they're missing events,
             //so we should crash in this case
@@ -1120,7 +1126,7 @@ public class code_swarm extends PApplet {
             // int eventLinesAdded = atts.getValue( "linesadded" );
             // int eventLinesRemoved = atts.getValue( "linesremoved" );
 
-            FileEvent evt = new FileEvent(eventDate, eventAuthor, "", eventFilename);
+            FileEvent evt = new FileEvent(eventDate, eventAuthor, "", eventFilename, eventWeight);
             try {
               queue.put(evt);
             } catch (InterruptedException e) {
@@ -1136,7 +1142,7 @@ public class code_swarm extends PApplet {
         }
       });
       try {
-       reader.parse(fullFilename);
+        reader.parse(fullFilename);
       } catch (Exception e) {
         // TODO Auto-generated catch block
         System.out.println("Error parsing xml:");
