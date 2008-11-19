@@ -87,6 +87,7 @@ public class code_swarm extends PApplet {
 
   // Graphics state variables
   boolean looping = true;
+  boolean coolDown = false;
   boolean showHistogram = true;
   boolean showDate = true;
   boolean showLegend = false;
@@ -509,13 +510,16 @@ public class code_swarm extends PApplet {
     }
 
     // Stop animation when we run out of data AND all nodes are dead
-    if (eventsQueue.isEmpty() && !isThereLife()) {
-      // noLoop();
-      backgroundExecutor.shutdown();
-      try {
-        backgroundExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-      } catch (InterruptedException e) { /* Do nothing, just exit */}
-      exit();
+    if (eventsQueue.isEmpty()) {
+      coolDown = true;
+      if ( !isThereLife() ) {
+        // noLoop();
+        backgroundExecutor.shutdown();
+        try {
+          backgroundExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+        } catch (InterruptedException e) { /* Do nothing, just exit */}
+        exit();
+      }
     }
 
     long end = System.currentTimeMillis();
@@ -558,6 +562,8 @@ public class code_swarm extends PApplet {
     String dateText = formatter.format(prevDate);
     textAlign(RIGHT, BASELINE);
     textSize(font.size);
+    if (coolDown)
+      dateText = "End of history: " + dateText;
     text(dateText, width - 1, height - textDescent());
   }
 
@@ -836,7 +842,8 @@ public class code_swarm extends PApplet {
       }
     }
 
-    prevDate = nextDate;
+    if ( !coolDown )
+      prevDate = nextDate;
 
     // sort colorbins
     cb.sort();
