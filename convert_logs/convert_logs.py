@@ -61,6 +61,10 @@ def parse_args(argv):
         metavar="<log file>",
         help="input mercurial log to convert to standard event xml")
 
+    p.add_option( "-d", "--darcs-log", dest="darcs_log",
+        metavar="<log file>",
+        help="input darcs log to convert to standard event xml")
+
     p.add_option( "-o", "--output-log", dest="output_log", 
         metavar="<log file>",
         help="specify standard log output file")
@@ -68,7 +72,6 @@ def parse_args(argv):
     p.add_option( "-p", "--perforce-path", dest="perforce_path",
         metavar="<log file>",
         help="get data from perforce and save it to standard event xml")
-
 
     (options, args) = p.parse_args(argv)
 
@@ -299,6 +302,40 @@ def main():
                     state = 0
                 else:
                     print 'Error: undifined state'
+
+        create_event_xml(event_list, log_file, opts.output_log)
+
+    if opts.darcs_log:
+        log_file = opts.darcs_log
+
+        if os.path.exists(log_file):
+            event_list = []
+            file_handle = open(log_file, 'r')
+            user = ''
+            date = ''
+            for line in file_handle.readlines():
+                line = line.rstrip()
+                if len(line) == 0:
+                    continue
+                elif line[0] != ' ':
+                    date = line[:29].strip()
+                    author = line[30:].strip()
+                    if date[7:9] == '  ':
+                        date = date.replace('  ', ' 0')
+                    date = int(time.mktime(time.strptime(date, '%a %b %d %H:%M:%S %Z %Y')))*1000
+                    parts = author.split('<')
+                    if len(parts) == 2:
+                        author = parts[0].strip()
+                elif line[0] == ' ' and len(line) > 4:
+                    if line[4:8] == 'M ./' or line[4:8] == 'A ./' or line[4:8] == 'R ./':
+                        filename = line.lstrip('MAR ./')
+                        filename = filename.rstrip(' +-123456789')
+                        event_list.append(Event(filename, date, author))
+                        continue
+                    else:
+                        continue
+                else:
+                    continue
 
         create_event_xml(event_list, log_file, opts.output_log)
         
