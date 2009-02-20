@@ -158,7 +158,8 @@ def main():
                     if(rev_line.lower().find("date:") == 0):
                         rev_parts = rev_line.split(';  ')
                         date_parts = rev_parts[0].split(": ")
-                        date = time.strptime(date_parts[1], '%Y/%m/%d %H:%M:%S')
+                        date_without_plus = date_parts[1].split("+");
+                        date = time.strptime(date_without_plus[0].strip(), '%Y-%m-%d %H:%M:%S')
                         date = int(time.mktime(date))*1000
                         author = rev_parts[1].split(": ")[1]
                         event_list.append(Event(filename, date, author))
