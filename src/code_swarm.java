@@ -572,6 +572,7 @@ public class code_swarm extends PApplet {
    */
   public void drawHistory() {
     int counter = 0;
+    strokeWeight(1);
 
     for (ColorBins cb : history) {
       for (int i = 0; i < cb.num; i++) {
