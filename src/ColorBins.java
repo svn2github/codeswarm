@@ -17,7 +17,7 @@
  * along with code_swarm.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import processing.core.PApplet;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,7 +49,7 @@ class ColorBins
        colorMap.put(c, 1);
     }
 
-    totalCount = totalCount + 1;
+    totalCount++;
   }
 
 
@@ -63,7 +63,7 @@ class ColorBins
        keys[i++] = k;
     }
 
-    keys = PApplet.sort(keys);
+    Arrays.sort(keys);
   }
 }
 
