@@ -18,33 +18,52 @@
  */
 
 import processing.core.PApplet;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @brief Definition of the colored histogram elements
  */
 class ColorBins
 {
-  int [] colorList;
-  int num;
+  // The color is the key, and the count is the value
+  Map<Integer, Integer> colorMap;
+  int totalCount;
+  int [] keys;
+  int keyCount;
 
   ColorBins()
   {
-    colorList = new int[2];
-    num = 0;
+    colorMap = new HashMap<Integer, Integer>();
+    totalCount = 0;
+    keyCount = 0;
   }
 
   public void add( int c )
   {
-    if ( num >= colorList.length )
-      colorList = PApplet.expand( colorList );
+    if (colorMap.containsKey(c)) {
+       int v = colorMap.get(c);
+       colorMap.put(c, v + 1);
+    }
+    else {
+       colorMap.put(c, 1);
+    }
 
-    colorList[num] = c;
-    num++;
+    totalCount = totalCount + 1;
   }
+
+
 
   public void sort()
   {
-    colorList = PApplet.sort( colorList );
+    keyCount = colorMap.size();
+    keys = new int[keyCount];
+    int i = 0;
+    for (Integer k : colorMap.keySet()) {
+       keys[i++] = k;
+    }
+
+    keys = PApplet.sort(keys);
   }
 }
 
