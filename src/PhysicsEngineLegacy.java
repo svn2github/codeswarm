@@ -18,6 +18,7 @@
  */
 
 import java.util.Properties;
+import java.util.LinkedList;
 import javax.vecmath.Vector2f;
 
 /**
@@ -39,11 +40,13 @@ public class PhysicsEngineLegacy implements PhysicsEngine
   
   /**
    * Method for initializing parameters.
+   * @param c The code_swarm object that is using us.
    * @param p Properties from the config file.
    */
   //PhysicalEngineLegacy(float forceEdgeMultiplier, float forceCalculationRandomizer, float forceToSpeedMultiplier, float speedToPositionDrag)
-  public void setup (java.util.Properties p)
+  public void setup (code_swarm c, Properties p)
   {
+      // we don't need c, so ignore it.
     cfg = p;
     FORCE_EDGE_MULTIPLIER = Float.parseFloat(cfg.getProperty("edgeMultiplier","1.0"));
     FORCE_CALCULATION_RANDOMIZER = Float.parseFloat(cfg.getProperty("calculationRandomizer","0.01"));
@@ -197,116 +200,162 @@ public class PhysicsEngineLegacy implements PhysicsEngine
   /**
    * Method that allows Physics Engine to modify forces between files and people during the relax stage
    * 
-   * @param edge the edge to which the force apply (both ends)
+   * @param edges the edges to which the force apply (both ends)
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onRelaxEdge(code_swarm.Edge edge) {
-    Vector2f force    = new Vector2f();
+  public LinkedList<code_swarm.Edge> onRelaxEdges(LinkedList<code_swarm.Edge> edges) {
+      for (code_swarm.Edge edge : edges){
+          Vector2f force    = new Vector2f();
 
-    // Calculate force between the node "from" and the node "to"
-    force = calculateForceAlongAnEdge(edge);
+          // Calculate force between the node "from" and the node "to"
+          force = calculateForceAlongAnEdge(edge);
 
-    // transmit (applying) fake force projection to file and person nodes
-    applyForceTo(edge.nodeTo, force);
-    force.negate(); // force is inverted for the other end of the edge
-    applyForceTo(edge.nodeFrom, force);
+          // transmit (applying) fake force projection to file and person nodes
+          applyForceTo(edge.nodeTo, force);
+          force.negate(); // force is inverted for the other end of the edge
+          applyForceTo(edge.nodeFrom, force);
+      }
+      return edges;
   }
   
   /**
    * Method that allows Physics Engine to modify Speed / Position during the relax phase.
    * 
-   * @param fNode the node to which the force apply
+   * @param fNodes the nodes to which the force apply
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onRelaxNode(code_swarm.FileNode fNode ) {
-    Vector2f forceBetweenFiles = new Vector2f();
-    Vector2f forceSummation    = new Vector2f();
-      
-    // Calculation of repulsive force between persons
-    for (code_swarm.FileNode n : code_swarm.getLivingNodes()) {
-      if (n != fNode) {
-        // elemental force calculation, and summation
-        forceBetweenFiles = calculateForceBetweenNodes(fNode, n);
-        forceSummation.add(forceBetweenFiles);
+  public LinkedList<code_swarm.FileNode> onRelaxNodes(LinkedList<code_swarm.FileNode> fNodes ) {
+      for (code_swarm.FileNode fNode : fNodes) {
+          Vector2f forceBetweenFiles = new Vector2f();
+          Vector2f forceSummation    = new Vector2f();
+
+          // Calculation of repulsive force between persons
+          for (code_swarm.FileNode n : fNodes) {
+              if (n != fNode) {
+                  // elemental force calculation, and summation
+                  forceBetweenFiles = calculateForceBetweenNodes(fNode, n);
+                  forceSummation.add(forceBetweenFiles);
+              }
+          }
+          // Apply repulsive force from other files to this Node
+          applyForceTo(fNode, forceSummation);
       }
-    }
-    // Apply repulsive force from other files to this Node
-    applyForceTo(fNode, forceSummation);
+      return fNodes;
   }
   
   /**
    * Method that allows Physics Engine to modify Speed / Position during the relax phase.
    * 
-   * @param pNode the node to which the force apply
+   * @param pNodes the nodes to which the force apply
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onRelaxPerson(code_swarm.PersonNode pNode) {
-    Vector2f forceBetweenPersons = new Vector2f();
-    Vector2f forceSummation      = new Vector2f();
+  public LinkedList<code_swarm.PersonNode> onRelaxPeople(LinkedList<code_swarm.PersonNode> pNodes) {
+      for (code_swarm.PersonNode pNode : pNodes) {
+          Vector2f forceBetweenPersons = new Vector2f();
+          Vector2f forceSummation      = new Vector2f();
 
-    // Calculation of repulsive force between persons
-    for (code_swarm.PersonNode p : code_swarm.getLivingPeople()) {
-      if (p != pNode) {
-        // elemental force calculation, and summation
-        forceBetweenPersons = calculateForceBetweenNodes(pNode, p);
-        forceSummation.add(forceBetweenPersons);
+          // Calculation of repulsive force between persons
+          for (code_swarm.PersonNode p : pNodes) {
+              if (p != pNode) {
+                  // elemental force calculation, and summation
+                  forceBetweenPersons = calculateForceBetweenNodes(pNode, p);
+                  forceSummation.add(forceBetweenPersons);
+              }
+          }
+          // Apply repulsive force from other persons to this Node
+          applyForceTo(pNode, forceSummation);
+
+          // Don't know why, but the prototype had this.
+          pNode.mSpeed.scale(1.0f/12);
       }
+      return pNodes;
+  }
+  
+  /**
+   * Method that allows Physics Engine to modify Speed / Position during the update phase.
+   * 
+   * @param edges the nodes to which the force apply
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
+   * 
+   * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
+   */
+  public LinkedList<code_swarm.Edge> onUpdateEdges(LinkedList<code_swarm.Edge> edges) {
+    LinkedList<code_swarm.Edge> stillLiving = new LinkedList<code_swarm.Edge>();
+
+    while(!edges.isEmpty())
+    {
+        code_swarm.Edge edge = edges.removeFirst();
+        if (edge.decay()) {
+            stillLiving.addLast(edge);
+        }
     }
-    // Apply repulsive force from other persons to this Node
-    applyForceTo(pNode, forceSummation);
-    
-    // Don't know why, but the prototype had this.
-    pNode.mSpeed.scale(1.0f/12);
+    return stillLiving;
   }
   
   /**
    * Method that allows Physics Engine to modify Speed / Position during the update phase.
    * 
-   * @param edge the node to which the force apply
+   * @param fNodes the nodes to which the force apply
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onUpdateEdge(code_swarm.Edge edge) {
-    edge.decay();
+  public LinkedList<code_swarm.FileNode> onUpdateNodes(LinkedList<code_swarm.FileNode> fNodes) {
+      LinkedList<code_swarm.FileNode> stillLiving = new LinkedList<code_swarm.FileNode>();
+    while (!fNodes.isEmpty())
+    {
+        code_swarm.FileNode fNode = fNodes.removeFirst();
+        // Apply Speed to Position on nodes
+        applySpeedTo(fNode);
+    
+        // ensure coherent resulting position
+        fNode.mPosition.set(constrain(fNode.mPosition.x, 0.0f, (float)code_swarm.width),constrain(fNode.mPosition.y, 0.0f, (float)code_swarm.height));
+        
+        // shortening life
+        if (fNode.decay()) {
+            stillLiving.addLast(fNode);
+        }
+    }
+    return stillLiving;
   }
-  
+
   /**
    * Method that allows Physics Engine to modify Speed / Position during the update phase.
    * 
-   * @param fNode the node to which the force apply
+   * @param pNodes the nodes to which the force apply
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onUpdateNode(code_swarm.FileNode fNode) {
-    // Apply Speed to Position on nodes
-    applySpeedTo(fNode);
-    
-    // ensure coherent resulting position
-    fNode.mPosition.set(constrain(fNode.mPosition.x, 0.0f, (float)code_swarm.width),constrain(fNode.mPosition.y, 0.0f, (float)code_swarm.height));
-    
-    // shortening life
-    fNode.decay();
-  }
-  
-  /**
-   * Method that allows Physics Engine to modify Speed / Position during the update phase.
-   * 
-   * @param pNode the node to which the force apply
-   * 
-   * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
-   */
-  public void onUpdatePerson(code_swarm.PersonNode pNode) {
-    // Apply Speed to Position on nodes
-    applySpeedTo(pNode);
-    
-    // ensure coherent resulting position
-    pNode.mPosition.set(constrain(pNode.mPosition.x, 0.0f, (float)code_swarm.width),constrain(pNode.mPosition.y, 0.0f, (float)code_swarm.height));
-    
-    // shortening life
-    pNode.decay();
+  public LinkedList<code_swarm.PersonNode> onUpdatePeople(LinkedList<code_swarm.PersonNode> pNodes) {
+    LinkedList<code_swarm.PersonNode> stillLiving = new LinkedList<code_swarm.PersonNode>();
+    while (!pNodes.isEmpty())
+    {
+        code_swarm.PersonNode pNode = pNodes.removeFirst();
+        // Apply Speed to Position on nodes
+        applySpeedTo(pNode);
+        
+        // ensure coherent resulting position
+        pNode.mPosition.set(constrain(pNode.mPosition.x, 0.0f, (float)code_swarm.width),constrain(pNode.mPosition.y, 0.0f, (float)code_swarm.height));
+        
+        // shortening life
+        if (pNode.decay()) {
+            stillLiving.addLast(pNode);
+        }
+    }
+    return stillLiving;
   }
   
   /**

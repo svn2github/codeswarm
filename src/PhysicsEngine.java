@@ -18,6 +18,7 @@
  */
 
 import java.util.Properties;
+import java.util.LinkedList;
 import javax.vecmath.Vector2f;
 
 /**
@@ -32,9 +33,10 @@ public interface PhysicsEngine
 {
   /**
    * Initialize the Physical Engine
+   * @param c The code_swarm object that is using us.
    * @param p Properties file
    */
-  public void setup (Properties p);
+  public void setup (code_swarm c, Properties p);
   
   /**
    * Method that allows Physics Engine to initialize the Frame
@@ -51,56 +53,74 @@ public interface PhysicsEngine
   /**
    * Method that allows Physics Engine to modify Speed / Position during the relax phase.
    * 
-   * @param edge the node to which the force apply
+   * @param edges the nodes to which the force apply
    * 
+   * @return LinkedList<code_swarm.Edge> which is the list of edges which are still active/living
+   *           after the relaxing.
+   *
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onRelaxEdge(code_swarm.Edge edge);
+  public LinkedList<code_swarm.Edge> onRelaxEdges(LinkedList<code_swarm.Edge> edges);
   
   /**
    * Method that allows Physics Engine to modify Speed / Position during the relax phase.
    * 
-   * @param fNode the node to which the force apply
+   * @param fNodes the nodes to which the force apply
    * 
+   * @return LinkedList<code_swarm.FileNode> which is the list of FileNodes which are still active/living
+   *           after the relaxing.
+   *
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onRelaxNode(code_swarm.FileNode fNode);
+  public LinkedList<code_swarm.FileNode> onRelaxNodes(LinkedList<code_swarm.FileNode> fNodes);
   
   /**
    * Method that allows Physics Engine to modify Speed / Position during the relax phase.
    * 
-   * @param pNode the node to which the force apply
+   * @param pNodes the nodes to which the force apply
+   *
+   * @return LinkedList<code_swarm.PersonNode> which is the list of PersonNodes which are still active/living
+   *           after the relaxing.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onRelaxPerson(code_swarm.PersonNode pNode);
+  public LinkedList<code_swarm.PersonNode> onRelaxPeople(LinkedList<code_swarm.PersonNode> pNodes);
   
   /**
    * Method that allows Physics Engine to modify Speed / Position during the update phase.
    * 
-   * @param edge the node to which the force apply
+   * @param edges the nodes to which the force apply
+   * 
+   * @return LinkedList<code_swarm.Edge> which is the list of edges which are still active/living
+   *           after the update.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onUpdateEdge(code_swarm.Edge edge);
+  public LinkedList<code_swarm.Edge> onUpdateEdges(LinkedList<code_swarm.Edge> edges);
   
   /**
    * Method that allows Physics Engine to modify Speed / Position during the update phase.
    * 
    * @param fNode the node to which the force apply
    * 
+   * @return LinkedList<code_swarm.FileNode> which is the list of FileNodes which are still active/living
+   *           after the update.
+   * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onUpdateNode(code_swarm.FileNode fNode);
+  public LinkedList<code_swarm.FileNode> onUpdateNodes(LinkedList<code_swarm.FileNode> fNodes);
   
   /**
    * Method that allows Physics Engine to modify Speed / Position during the update phase.
    * 
    * @param pNode the node to which the force apply
    * 
+   * @return LinkedList<code_swarm.PersonNode> which is the list of PersonNodes which are still active/living
+   *           after the update.
+   * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onUpdatePerson(code_swarm.PersonNode pNode);
+  public LinkedList<code_swarm.PersonNode> onUpdatePeople(LinkedList<code_swarm.PersonNode> pNodes);
   
   /**
    * 

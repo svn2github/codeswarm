@@ -18,6 +18,7 @@
  */
 
 import java.util.Properties;
+import java.util.LinkedList;
 import javax.vecmath.Vector2f;
 
 /**
@@ -33,6 +34,7 @@ public class PhysicsEngineMaxwellsDemon implements PhysicsEngine
    */
   private static final long serialVersionUID = 1L;
 
+  private code_swarm cs;
   private Properties cfg;
 
   private float DRAG;
@@ -47,11 +49,13 @@ public class PhysicsEngineMaxwellsDemon implements PhysicsEngine
 
 
   /**
-   * Method for initializing parameters.
-   * @param p Properties from the config file.
+   * Initialize the Physical Engine
+   * @param c The code_swarm object that is using us.
+   * @param p Properties file
    */
-  public void setup (Properties p)
+  public void setup (code_swarm c, Properties p)
   {
+    cs = c;
     cfg = p;
     DRAG = Float.parseFloat(cfg.getProperty("drag","0.00001"));
     doorSize = Integer.parseInt(cfg.getProperty("doorSize","100"));
@@ -346,7 +350,7 @@ public class PhysicsEngineMaxwellsDemon implements PhysicsEngine
   public void initializeFrame() {
     doorOpen = false;
     
-    for (code_swarm.PersonNode p : code_swarm.getLivingPeople()) {
+    for (code_swarm.PersonNode p : cs.getLivingPeople()) {
       if (p.mSpeed.x < 0.0f && nearDoor(p)) {
         doorOpen = true;
         break;
@@ -366,215 +370,263 @@ public class PhysicsEngineMaxwellsDemon implements PhysicsEngine
   /**
    * Method that allows Physics Engine to modify forces between files and people during the relax stage
    * 
-   * @param edge the edge to which the force apply (both ends)
+   * @param edges the edges to which the force apply (both ends)
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onRelaxEdge(code_swarm.Edge edge) {
-    boolean fSide = whichSide(edge.nodeFrom);
-    boolean pSide = whichSide(edge.nodeTo);
+  public LinkedList<code_swarm.Edge> onRelaxEdges(LinkedList<code_swarm.Edge> edges) {
+      for (code_swarm.Edge edge : edges){
+          boolean fSide = whichSide(edge.nodeFrom);
+          boolean pSide = whichSide(edge.nodeTo);
 
-    if ((!doorOpen && fSide != pSide) || ((doorOpen && edge.nodeFrom.mPosition.y < startDoorY) || (doorOpen && edge.nodeFrom.mPosition.y > startDoorY + doorSize))) {
-      return;
-    }
+          if ((!doorOpen && fSide != pSide) || ((doorOpen && edge.nodeFrom.mPosition.y < startDoorY) || (doorOpen && edge.nodeFrom.mPosition.y > startDoorY + doorSize))) {
+              continue;
+          }
 
-    // Calculate force between the node "from" and the node "to"
-    Vector2f force = calculateForceAlongAnEdge(edge);
+          // Calculate force between the node "from" and the node "to"
+          Vector2f force = calculateForceAlongAnEdge(edge);
 
-    // transmit force projection to file and person nodes
-    force.negate();
-    applyForceTo(edge.nodeFrom, force); // fNode: attract fNode to pNode
-    // which half of the screen are we on?
-    applySpeedTo(edge.nodeFrom); // fNode: move it.
-    constrainNode(edge.nodeFrom, whichSide(edge.nodeFrom)); // Keep it in bounds.
+          // transmit force projection to file and person nodes
+          force.negate();
+          applyForceTo(edge.nodeFrom, force); // fNode: attract fNode to pNode
+          // which half of the screen are we on?
+          applySpeedTo(edge.nodeFrom); // fNode: move it.
+          constrainNode(edge.nodeFrom, whichSide(edge.nodeFrom)); // Keep it in bounds.
+      }
+      return edges;
   }
 
   /**
    * Method that allows Physics Engine to modify Speed / Position during the update phase.
    * 
-   * @param edge the node to which the force apply
+   * @param edges the nodes to which the force apply
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onUpdateEdge(code_swarm.Edge edge) {
-    edge.decay();
+  public LinkedList<code_swarm.Edge> onUpdateEdges(LinkedList<code_swarm.Edge> edges) {
+    LinkedList<code_swarm.Edge> stillLiving = new LinkedList<code_swarm.Edge>();
+
+    while(!edges.isEmpty())
+    {
+        code_swarm.Edge edge = edges.removeFirst();
+        if (edge.decay()) {
+            stillLiving.addLast(edge);
+        }
+    }
+    return stillLiving;
   }
 
   /**
    * Method that allows Physics Engine to modify Speed / Position during the relax phase.
    * 
-   * @param fNode the node to which the force apply
+   * @param fNodes the nodes to which the force apply
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onRelaxNode(code_swarm.FileNode fNode ) {
-    boolean mySide = whichSide(fNode);
+  public LinkedList<code_swarm.FileNode> onRelaxNodes(LinkedList<code_swarm.FileNode> fNodes ) {
+      for (code_swarm.FileNode fNode : fNodes) {
+          boolean mySide = whichSide(fNode);
 
-    Vector2f forceBetweenFiles = new Vector2f();
-    Vector2f forceSummation    = new Vector2f();
+          Vector2f forceBetweenFiles = new Vector2f();
+          Vector2f forceSummation    = new Vector2f();
 
-    // Calculation of repulsive force between persons
-    for (code_swarm.FileNode n : code_swarm.getLivingNodes()) {
-      if (n != fNode && mySide == whichSide(n)) {
-        // elemental force calculation, and summation
-        forceBetweenFiles = calculateForceBetweenfNodes(fNode, n);
-        forceSummation.add(forceBetweenFiles);
+          // Calculation of repulsive force between persons
+          for (code_swarm.FileNode n : fNodes) {
+              if (n != fNode && mySide == whichSide(n)) {
+                  // elemental force calculation, and summation
+                  forceBetweenFiles = calculateForceBetweenfNodes(fNode, n);
+                  forceSummation.add(forceBetweenFiles);
+              }
+          }
+          // Apply repulsive force from other files to this Node
+          applyForceTo(fNode, forceSummation);
       }
-    }
-    // Apply repulsive force from other files to this Node
-    applyForceTo(fNode, forceSummation);
+      return fNodes;
   }
 
   /**
    * Method that allows Physics Engine to modify Speed / Position during the update phase.
    * 
-   * @param fNode the node to which the force apply
+   * @param fNodes the nodes to which the force apply
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onUpdateNode(code_swarm.FileNode fNode) {
-    // Apply Speed to Position on nodes
-    applySpeedTo(fNode);
-    constrainNode(fNode, whichSide(fNode)); // Keep it in bounds.
-    
-    // shortening life
-    fNode.decay();
+  public LinkedList<code_swarm.FileNode> onUpdateNodes(LinkedList<code_swarm.FileNode> fNodes) {
+      LinkedList<code_swarm.FileNode> stillLiving = new LinkedList<code_swarm.FileNode>();
+      while (!fNodes.isEmpty())
+      {
+          code_swarm.FileNode fNode = fNodes.removeFirst();
+          // Apply Speed to Position on nodes
+          applySpeedTo(fNode);
+          constrainNode(fNode, whichSide(fNode)); // Keep it in bounds.
 
-    // Apply drag (reduce Speed for next frame calculation)
-    fNode.mSpeed.scale(DRAG);
+          // Apply drag (reduce Speed for next frame calculation)
+          fNode.mSpeed.scale(DRAG);
+
+          // shortening life
+          if (fNode.decay()) {
+              stillLiving.addLast(fNode);
+          }
+      }
+      return stillLiving;
   }
 
   /**
    * Method that allows Physics Engine to modify Speed / Position during the relax phase.
    * 
-   * @param pNode the node to which the force apply
+   * @param pNodes the nodes to which the force apply
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onRelaxPerson(code_swarm.PersonNode pNode) {
-    if (pNode.mSpeed.length() == 0) {
-      // Range (-1,1)
-      pNode.mSpeed.set(pNode.mass*((float)Math.random()-pNode.mass),pNode.mass*((float)Math.random()-pNode.mass));
-    }
+  public LinkedList<code_swarm.PersonNode> onRelaxPeople(LinkedList<code_swarm.PersonNode> pNodes) {
+      for (code_swarm.PersonNode pNode : pNodes) {
+          if (pNode.mSpeed.length() == 0) {
+              // Range (-1,1)
+              pNode.mSpeed.set(pNode.mass*((float)Math.random()-pNode.mass),pNode.mass*((float)Math.random()-pNode.mass));
+          }
 
-    pNode.mSpeed.scale(pNode.mass);
-    pNode.mSpeed.normalize();
-    pNode.mSpeed.scale(5);
+          pNode.mSpeed.scale(pNode.mass);
+          pNode.mSpeed.normalize();
+          pNode.mSpeed.scale(5);
 
-    float distance = pNode.mSpeed.length();
-    if (distance > 0) {
-      float deltaDistance = (pNode.mass - distance) / (distance * 2);
-      deltaDistance *= ((float)pNode.life / pNode.LIFE_INIT);
+          float distance = pNode.mSpeed.length();
+          if (distance > 0) {
+              float deltaDistance = (pNode.mass - distance) / (distance * 2);
+              deltaDistance *= ((float)pNode.life / pNode.LIFE_INIT);
 
-      pNode.mSpeed.scale(deltaDistance);
-    }
+              pNode.mSpeed.scale(deltaDistance);
+          }
+      }
+      return pNodes;
   }
 
   /**
    * Method that allows Physics Engine to modify Speed / Position during the update phase.
    * 
-   * @param pNode the node to which the force apply
+   * @param pNodes the nodes to which the force apply
+   *
+   * @return Returns a LinkedList of nodes which are still alive after the function call.
    * 
    * @Note Standard physics is "Position Variation = Speed x Duration" with a convention of "Duration=1" between to frames
    */
-  public void onUpdatePerson(code_swarm.PersonNode pNode) {
-    boolean rightSide = whichSide(pNode);
-    
-    applySpeedTo(pNode);
+  public LinkedList<code_swarm.PersonNode> onUpdatePeople(LinkedList<code_swarm.PersonNode> pNodes) {
+      LinkedList<code_swarm.PersonNode> stillLiving = new LinkedList<code_swarm.PersonNode>();
+      while (!pNodes.isEmpty())
+      {
+          code_swarm.PersonNode pNode = pNodes.removeFirst();
+          boolean rightSide = whichSide(pNode);
 
-    // Check for collisions with neighbors.
-    for (code_swarm.PersonNode p : code_swarm.getLivingPeople()) {
-      if (pNode != p) {
-        Vector2f force = calculateForceBetweenpNodes(pNode,p);
-        pNode.mPosition.add(force);
+          applySpeedTo(pNode);
+
+          // Check for collisions with neighbors.
+          for (code_swarm.PersonNode p : pNodes) {
+                  Vector2f force = calculateForceBetweenpNodes(pNode,p);
+                  pNode.mPosition.add(force);
+          }
+          for (code_swarm.PersonNode p : stillLiving) {
+                  Vector2f force = calculateForceBetweenpNodes(pNode,p);
+                  pNode.mPosition.add(force);
+          }
+
+          constrainNode(pNode, rightSide); // Keep it in bounds.
+
+          if (doorOpen) {
+              // Check for vertical wall collisions
+              // 4 walls to check.
+              //  |  |  |
+              //  |  |  |
+              //  |     |
+              //  |  |  |
+              //  |  |  |
+              if (pNode.mPosition.y < startDoorY || pNode.mPosition.y > midWayY) { // Above the door, and below the door.
+                  if (rightSide) {
+                      if ((pNode.mPosition.x < (midWayX + pNode.mass) && pNode.mSpeed.x < 0.0f) || (pNode.mPosition.x > (code_swarm.width - pNode.mass) && pNode.mSpeed.x > 0.0f)) {
+                          pNode.mSpeed.x = -pNode.mSpeed.x;
+                          int i = 0;
+                          while (pNode.mPosition.x < (midWayX + pNode.mass) || pNode.mPosition.x > (code_swarm.width - pNode.mass)) {
+                              pNode.mPosition.x += pNode.mSpeed.x * (i++ % 10);
+                          }
+                      }
+                  } else { // left side
+                      if ((pNode.mPosition.x < pNode.mass && pNode.mSpeed.x < 0.0f) || (pNode.mPosition.x > (midWayX - pNode.mass) && pNode.mSpeed.x > 0.0f)) {
+                          pNode.mSpeed.x = -pNode.mSpeed.x;
+                          int i = 0;
+                          while (pNode.mPosition.x < pNode.mass || pNode.mPosition.x > (midWayX - pNode.mass)) {
+                              pNode.mPosition.x += pNode.mSpeed.x * (i++ % 10);
+                          }
+                      }
+                  }
+              } else { // Same level as the door
+                  if ((pNode.mPosition.x < pNode.mass && pNode.mSpeed.x < 0.0f) || (pNode.mPosition.x > (code_swarm.width - pNode.mass) && pNode.mSpeed.x > 0.0f)) {
+                      pNode.mSpeed.x = -pNode.mSpeed.x;
+                      int i = 0;
+                      while (pNode.mPosition.x < pNode.mass || pNode.mPosition.x > (code_swarm.width - pNode.mass)) {
+                          pNode.mPosition.x += pNode.mSpeed.x * (i++ % 10);
+                      }
+                  }
+              }
+          } else { // Door is closed.
+              // Check for vertical wall collisions
+              // 3 walls to check.
+              //  |  |  |
+              //  |  |  |
+              //  |  |  |
+              //  |  |  |
+              //  |  |  |
+
+              if (rightSide) {
+                  if ((pNode.mPosition.x < (midWayX + pNode.mass) && pNode.mSpeed.x < 0.0f) || (pNode.mPosition.x > (code_swarm.width - pNode.mass) && pNode.mSpeed.x > 0.0f)) {
+                      pNode.mSpeed.x = -pNode.mSpeed.x;
+                      int i = 0;
+                      while (pNode.mPosition.x < (midWayX + pNode.mass) || pNode.mPosition.x > (code_swarm.width - pNode.mass)) {
+                          pNode.mPosition.x += pNode.mSpeed.x * (i++ % 10);
+                      }
+                  }
+              } else { // left side
+                  if ((pNode.mPosition.x < pNode.mass && pNode.mSpeed.x < 0.0f) || (pNode.mPosition.x > (midWayX - pNode.mass) && pNode.mSpeed.x > 0.0f)) {
+                      pNode.mSpeed.x = -pNode.mSpeed.x;
+                      int i = 0;
+                      while (pNode.mPosition.x < pNode.mass || pNode.mPosition.x > (midWayX - pNode.mass)) {
+                          pNode.mPosition.x += pNode.mSpeed.x * (i++ % 10);
+                      }
+                  }
+              }
+          }
+
+          // Check for horizontal wall collisions
+          // 2 walls to check.
+          //  _______
+          //
+          //
+          //
+          //  _______
+
+          if ((pNode.mPosition.y < pNode.mass && pNode.mSpeed.y < 0.0f) || ((pNode.mPosition.y > (code_swarm.height - pNode.mass) && pNode.mSpeed.y > 0.0f))) {
+              pNode.mSpeed.y = -pNode.mSpeed.y;
+              int i = 0;
+              while (pNode.mPosition.y < pNode.mass || pNode.mPosition.y > (code_swarm.height - pNode.mass)) {
+                  pNode.mPosition.y += pNode.mSpeed.y * (i++ % 10);
+              }
+          }
+
+          // Apply drag (reduce Speed for next frame calculation)
+          pNode.mSpeed.scale(DRAG);
+          // shortening life
+          if (pNode.decay()) {
+              stillLiving.addLast(pNode);
+          }
       }
-    }
-
-    constrainNode(pNode, rightSide); // Keep it in bounds.
-
-    if (doorOpen) {
-      // Check for vertical wall collisions
-      // 4 walls to check.
-      //  |  |  |
-      //  |  |  |
-      //  |     |
-      //  |  |  |
-      //  |  |  |
-      if (pNode.mPosition.y < startDoorY || pNode.mPosition.y > midWayY) { // Above the door, and below the door.
-        if (rightSide) {
-          if ((pNode.mPosition.x < (midWayX + pNode.mass) && pNode.mSpeed.x < 0.0f) || (pNode.mPosition.x > (code_swarm.width - pNode.mass) && pNode.mSpeed.x > 0.0f)) {
-            pNode.mSpeed.x = -pNode.mSpeed.x;
-            int i = 0;
-            while (pNode.mPosition.x < (midWayX + pNode.mass) || pNode.mPosition.x > (code_swarm.width - pNode.mass)) {
-              pNode.mPosition.x += pNode.mSpeed.x * (i++ % 10);
-            }
-          }
-        } else { // left side
-          if ((pNode.mPosition.x < pNode.mass && pNode.mSpeed.x < 0.0f) || (pNode.mPosition.x > (midWayX - pNode.mass) && pNode.mSpeed.x > 0.0f)) {
-            pNode.mSpeed.x = -pNode.mSpeed.x;
-            int i = 0;
-            while (pNode.mPosition.x < pNode.mass || pNode.mPosition.x > (midWayX - pNode.mass)) {
-              pNode.mPosition.x += pNode.mSpeed.x * (i++ % 10);
-            }
-          }
-        }
-      } else { // Same level as the door
-        if ((pNode.mPosition.x < pNode.mass && pNode.mSpeed.x < 0.0f) || (pNode.mPosition.x > (code_swarm.width - pNode.mass) && pNode.mSpeed.x > 0.0f)) {
-          pNode.mSpeed.x = -pNode.mSpeed.x;
-          int i = 0;
-          while (pNode.mPosition.x < pNode.mass || pNode.mPosition.x > (code_swarm.width - pNode.mass)) {
-            pNode.mPosition.x += pNode.mSpeed.x * (i++ % 10);
-          }
-        }
-      }
-    } else { // Door is closed.
-      // Check for vertical wall collisions
-      // 3 walls to check.
-      //  |  |  |
-      //  |  |  |
-      //  |  |  |
-      //  |  |  |
-      //  |  |  |
-      
-      if (rightSide) {
-        if ((pNode.mPosition.x < (midWayX + pNode.mass) && pNode.mSpeed.x < 0.0f) || (pNode.mPosition.x > (code_swarm.width - pNode.mass) && pNode.mSpeed.x > 0.0f)) {
-          pNode.mSpeed.x = -pNode.mSpeed.x;
-          int i = 0;
-          while (pNode.mPosition.x < (midWayX + pNode.mass) || pNode.mPosition.x > (code_swarm.width - pNode.mass)) {
-            pNode.mPosition.x += pNode.mSpeed.x * (i++ % 10);
-          }
-        }
-      } else { // left side
-        if ((pNode.mPosition.x < pNode.mass && pNode.mSpeed.x < 0.0f) || (pNode.mPosition.x > (midWayX - pNode.mass) && pNode.mSpeed.x > 0.0f)) {
-          pNode.mSpeed.x = -pNode.mSpeed.x;
-          int i = 0;
-          while (pNode.mPosition.x < pNode.mass || pNode.mPosition.x > (midWayX - pNode.mass)) {
-            pNode.mPosition.x += pNode.mSpeed.x * (i++ % 10);
-          }
-        }
-      }
-    }
-
-    // Check for horizontal wall collisions
-    // 2 walls to check.
-    //  _______
-    //
-    //
-    //
-    //  _______
-    
-    if ((pNode.mPosition.y < pNode.mass && pNode.mSpeed.y < 0.0f) || ((pNode.mPosition.y > (code_swarm.height - pNode.mass) && pNode.mSpeed.y > 0.0f))) {
-      pNode.mSpeed.y = -pNode.mSpeed.y;
-      int i = 0;
-      while (pNode.mPosition.y < pNode.mass || pNode.mPosition.y > (code_swarm.height - pNode.mass)) {
-        pNode.mPosition.y += pNode.mSpeed.y * (i++ % 10);
-      }
-    }
-    // shortening life
-    pNode.decay();
-
-    // Apply drag (reduce Speed for next frame calculation)
-    pNode.mSpeed.scale(DRAG);
+      return stillLiving;
   }
 
   /**
