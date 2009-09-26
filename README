@@ -1,4 +1,4 @@
-code_swarm it an experiment in organic software visualization.
+code_swarm is an experiment in organic software visualization.
 
 See http://vis.cs.ucdavis.edu/~ogawa/codeswarm for a picture of what we want
 to produce.
@@ -9,8 +9,8 @@ Google Group/Mailing List: http://groups.google.com/group/codeswarm
 
 I) How to build Java code_swarm in different environments.
 
-Please visit http://code.google.com/p/codeswarm/w/list for more detailed and
-up-to-date information.
+Please visit http://code.google.com/p/codeswarm/wiki/HowtoBuild for more 
+detailed and up-to-date information.
 
 This quick guide explains how to setup your development environment to build
 the binary (ie. jar) version of code_swarm from Java sources.
@@ -18,63 +18,93 @@ Explanations require at least an understanding of computing and of your
 Operating System, even if no Java skills are needed.
 
 I.1) Setup
-You will need the "Ant" software building tool, and the Java SDK from sun
-(no idea if other SDK could do the job).
+You will need the "Ant" software building tool, and Sun's Java Development Kit,
+version 1.5 or later (OpenJDK may work but is untested).
 
 I.1.a) Linux
-This guide is written with a Debian based Linux, Ubuntu 8.04. It would requires
+This guide is written with a Debian based Linux, Ubuntu 8.04. It requires
 some minor adaptation to use on other distribution (other packaging systems).
 
- * install ant with the following command (or with your favorite graphical package manager) 
-    sudo apt-get install ant 
+ * install ant with the following command (or with your favorite graphical 
+   package manager):
+     sudo apt-get install ant 
 
  * install sun-java-jdk 1.5 or 1.6 following your distribution recommendation 
     sudo apt-get install sun-java6-jdk 
 
- * configure the Java SDK to specify the new installation path, for instance on Ubuntu : 
-    sudo update-java-alternatives -s java-6-sun 
+ * configure the Java SDK to specify the new installation path, for instance 
+   on Ubuntu: 
+     sudo update-java-alternatives -s java-6-sun 
 
    See http://doc.ubuntu-fr.org/java
 
 I.1.b) Windows
  * download ant for all platforms at http://ant.apache.org/bindownload.cgi
+
  * unpack it where you want it to be installed, and add the location of
-   its binaries to the the "PATH" environment variable. For instance, add at the end : 
-   "C:\apache-ant-1.7.0\bin;" 
+   its binaries to the the "PATH" environment variable. For instance,
+   add at the end : "C:\apache-ant-1.7.0\bin;"
 
  * download Sun Java SDK at http://java.sun.com/javase/downloads/index.jsp
+
  * install it and add the "javac" Java compiler to the PATH : 
    "C:\Program Files\Java\jdk1.6.0_06\bin;" 
 
- * then create a new environment variable called JAVA_HOME and set its paht to 
-   "C:\Program Files\Java\jdk1.6.0_06;" 
+ * then create a new environment variable called JAVA_HOME and set its path to 
+   something like "C:\Program Files\Java\jdk1.6.X", where X is the specific
+   version number.
 
 I.2) Getting the sources
 
 code_swarm sources are under a Google Code Subversion repository (svn) :
 http://codeswarm.googlecode.com/svn/trunk/
 
-See Subversion homepage on tigris for all appropriate tools and documents.
-I would recommend "TortoiseSVN" for Windows users. Unix-like users would get
-their native "Subversion" package.
+See the Subversion homepage on subversion.tigris.org for all appropriate tools 
+and documents. I would recommend "TortoiseSVN" for Windows users. 
+Unix-like users should get their native "Subversion" package.
 
-See the "Source" tab on Google Code Project for further instruction on
-where to browse and checkout the sources.
+See http://code.google.com/p/codeswarm/source/ for further instructions on
+how to browse and checkout the sources.
 
 I.3) Building the sources
 
 Quick build :
- * Open a terminal/a command line shell, change directory to the root of
-   the code_swarm source folder, and to launch the build, type 
-   ant 
+ * Open a terminal/command line shell, change directory to the root of
+   the code_swarm source folder.
 
- * Then to launch code_swarm use 
-   ant run Notice that you can type only the second command to do both in once 
+ * Compile the sources by typing "ant".
 
-Alternatively, you can just try the "run.sh" or "run.bat" scripts to get it
-done in once, but need to rebuild manually typing "ant" if you modify sources
+
+
 
 Other commands :
  * "ant all" will also generate the Javadoc HTML sources documentation
  * "ant clean" will delete all intermediate and binary files 
 
+I.4) Running code_swarm
+
+These instructions are meant to be generic to cover most popular version
+control systems.
+Please visit http://code.google.com/p/codeswarm/wiki/GeneratingAVideo for more 
+detailed and up-to-date information.
+
+ * Obtain the log from your software version control system.
+   Save it as a text file.
+
+ * Convert your log file to the code_swarm XML data format:
+     Change directory to "convert_logs."
+     Generally, the syntax is:
+
+         convert_logs.py -Y input_log.txt -o output.xml
+
+     where -Y is a flag for your particular version control system.
+     Type "convert_logs.py --help" for details.
+
+ * Create your own configuration by copying "data/sample.config" and editing 
+   it to your preferences.
+
+ * To launch code_swarm, type "run.bat" in Windows or "run.sh" in Unix.
+   You will be prompted for the config file from the previous step.
+
+ * If you have specified TakeSnapshots=true in the config, saved images
+   will be in the "frames" directory.
