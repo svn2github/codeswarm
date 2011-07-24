@@ -37,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.awt.Color;
 
 import javax.vecmath.Vector2f;
 import org.codeswarm.dependencies.sun.tools.javac.util.Pair;
@@ -78,6 +79,7 @@ public class code_swarm extends PApplet {
   LinkedList<FileNode> livingNodes = new LinkedList<FileNode>(); 
   
   LinkedList<ColorBins> history;
+  LinkedList<Integer> peopleHistory;
 
   boolean finishedLoading = false;
 
@@ -91,12 +93,14 @@ public class code_swarm extends PApplet {
   // Graphics objects
   PFont font;
   PFont boldFont;
+  PFont infoFont;
   PImage sprite;
 
   // Graphics state variables
   boolean looping = true;
   boolean coolDown = false;
   boolean showHistogram = true;
+  boolean showActivity = false;
   boolean showDate = true;
   boolean showLegend = false;
   boolean showPopular = false;
@@ -210,6 +214,12 @@ public class code_swarm extends PApplet {
       showHistogram = true;
     } else {
       showHistogram = false;
+    }
+
+    if (cfg.getBooleanProperty(CodeSwarmConfig.SHOW_ACTIVITY, false)) {
+      showActivity = true;
+    } else {
+      showActivity = false;
     }
 
     if (cfg.getBooleanProperty(CodeSwarmConfig.SHOW_DATE, false)) {
@@ -387,6 +397,7 @@ public class code_swarm extends PApplet {
     edges         = new HashMap<Pair<FileNode, PersonNode>, Edge>();
     people        = new HashMap<String,PersonNode>();
     history       = new LinkedList<ColorBins>(); 
+    peopleHistory = new LinkedList<Integer>(); 
     
     if (isInputSorted) {
       //If the input is sorted, we only need to store the next few events
@@ -415,10 +426,13 @@ public class code_swarm extends PApplet {
     // Create fonts
     String fontName = cfg.getStringProperty(CodeSwarmConfig.FONT_KEY,"SansSerif");
     String fontNameBold = cfg.getStringProperty(CodeSwarmConfig.FONT_KEY_BOLD,"SansSerif");
+    String fontNameInfo = cfg.getStringProperty(CodeSwarmConfig.FONT_KEY_INFO,"SansSerif");
     Integer fontSize = cfg.getIntProperty(CodeSwarmConfig.FONT_SIZE, 10);
     Integer fontSizeBold = cfg.getIntProperty(CodeSwarmConfig.FONT_SIZE_BOLD, 14);
+    Integer fontSizeInfo = cfg.getIntProperty(CodeSwarmConfig.FONT_SIZE_INFO, 20);
     font = createFont(fontName, fontSize);
     boldFont = createFont(fontNameBold, fontSizeBold);
+    infoFont = createFont(fontNameInfo,fontSizeInfo);
 
     textFont(font);
 
@@ -508,6 +522,10 @@ public class code_swarm extends PApplet {
     if (showHistogram) {
       drawHistory();
     }
+    
+    if (showActivity) {
+	drawPeopleHistory();
+    }
 
     if (showDate) {
       drawDate();
@@ -580,11 +598,12 @@ public class code_swarm extends PApplet {
   public void drawDate() {
     fill(255);
     String dateText = formatter.format(prevDate);
+    textFont(infoFont);
     textAlign(RIGHT, BASELINE);
-    textSize(font.size);
+    textSize(infoFont.size);
     if (coolDown)
       dateText = "End of history: " + dateText;
-    text(dateText, width - 1, height - textDescent());
+    text(dateText, width - 1 - 10, height - textDescent() - 10);
   }
 
   /**
@@ -612,6 +631,40 @@ public class code_swarm extends PApplet {
   }
 
   /**
+   * Draw active committers at bottom
+   */
+  public void drawPeopleHistory() {
+      int x = width / 2 - peopleHistory.size() / 2 ;
+     int heightMinusThree = height - 3;
+     rectMode(CORNERS);
+
+     for (int people : peopleHistory) {
+	 // clamp people to 1 to 500 as a reasonable interval for most projects
+	 // ln x where x is 1 to 500
+	 // ln 1 = 0
+	 // ln 500 = 6.215   
+	 // 
+	 // Graph height wanted: 20 to 250
+	 // 230 / 6.215 = 37.01
+	 // 20 + ln x * 37.01
+	 final int GRAPH_HEIGHT_MIN = 10;
+	 final int GRAPH_HEIGHT_MAX = 70;
+	 final int MIN_PEOPLE = 1;
+	 final int MAX_PEOPLE = 500;
+	 final double LOG_SCALE = ( GRAPH_HEIGHT_MAX - GRAPH_HEIGHT_MIN ) / (double)Math.log( MAX_PEOPLE );
+	 int peopleNormalized = max( MIN_PEOPLE, people, min( people, MAX_PEOPLE ) ); 
+	 int heightLog = GRAPH_HEIGHT_MIN * max( min( 1, people ), 0 ) + (int)( Math.log( peopleNormalized ) * LOG_SCALE );
+	 //System.out.print( "people: " + people + " norm people: " + peopleNormalized + " heightLog " + heightLog + "\n" );
+	 int startY = heightMinusThree - heightLog;
+	 int endY = heightMinusThree;
+	 int color = new Color( 128, 128, 128 ).getRGB();
+	 stroke(color, 255); // 200 (nicer) vs. 255 (faster)
+	 rect(x, startY, x, endY);
+	 x++;
+     }
+  }
+
+  /**
    * Show the Loading screen.
    */
 
@@ -628,14 +681,14 @@ public class code_swarm extends PApplet {
    */
   public void drawLegend() {
     noStroke();
-    textFont(font);
+    textFont(infoFont);
     textAlign(LEFT, TOP);
     fill(255, 200);
-    text("Legend:", 0, 0);
+    text("Legend:", 10, 10);
     for (int i = 0; i < colorAssigner.tests.size(); i++) {
       ColorTest t = colorAssigner.tests.get(i);
       fill(t.c1, 200);
-      text(t.label, font.size, (i + 1) * font.size);
+      text(t.label, 10 + infoFont.size, (i + 1) * infoFont.size + 10);
     }
   }
 
@@ -777,6 +830,9 @@ public class code_swarm extends PApplet {
     ColorBins cb = new ColorBins();
     history.add(cb);
 
+    // Create a new people histogram line
+    peopleHistory.add(new Integer(livingPeople.size()));
+
     nextDate = new Date(prevDate.getTime() + UPDATE_DELTA);
     currentEvent = eventsQueue.peek();
 
@@ -859,6 +915,10 @@ public class code_swarm extends PApplet {
     // restrict history to drawable area
     while (history.size() > 320)
       history.remove();
+
+    // restrict people history to drawable area
+    while (peopleHistory.size() > 200)
+	peopleHistory.remove();
 
     // Do not allow toggle Physics Engine yet.
     safeToToggle = false;

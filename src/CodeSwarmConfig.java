@@ -52,9 +52,13 @@ public class CodeSwarmConfig
   /** R,G,B Determines the background color */
   public static final String FONT_KEY_BOLD = "BoldFont";
   /** R,G,B Determines the background color */
+  public static final String FONT_KEY_INFO = "InfoFont";
+  /** R,G,B Determines the background color */
   public static final String FONT_SIZE = "FontSize";
   /** R,G,B Determines the background color */
   public static final String FONT_SIZE_BOLD = "BoldFontSize";
+  /** R,G,B Determines the background color */
+  public static final String FONT_SIZE_INFO = "InfoFontSize";
   /** Rules for color coding nodes */
   public static final String COLOR_ASSIGN_KEY  =  "ColorAssign";
   /** Location to save snapshots. TakeSnapshots must be true to use */
@@ -93,6 +97,8 @@ public class CodeSwarmConfig
   public static final String SHOW_LEGEND = "ShowLegend";
   /** Boolean value, controls showing the Histogram */
   public static final String SHOW_HISTORY = "ShowHistory";
+  /** Boolean value, controls showing the Actvitiy */
+  public static final String SHOW_ACTIVITY = "ShowActivity";
   /** Boolean value, controls showing the Date */
   public static final String SHOW_DATE = "ShowDate";
   /** Boolean value, controls showing edges between nodes and people */
