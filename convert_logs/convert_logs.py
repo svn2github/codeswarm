@@ -89,12 +89,16 @@ def main():
         # Grab the correct log file based on what was specified.
         log_file = opts.svn_log
         if opts.git_log:
+            print "Parsing Git log..."
             log_file = opts.git_log
+        else:
+            print "Parsing SVN log..."
         
         # Check to be sure the specified log path exists.
         if os.path.exists(log_file):
             # Iterate through log file lines to parse out the revision history, adding Event
             # entries to a list as we go.
+            commits = 0
             event_list = []
             file_handle = open(log_file,  'r')
             line = file_handle.readline()
@@ -107,9 +111,14 @@ def main():
                     # The last line of the file is an svn_sep line, so if we try to retreive the
                     # revision line and get an empty string, we know we are at the end of the file
                     # and can break out of the loop.
-                    if rev_line is '' or len(rev_line) < 2:
+                    # "" is EOF condition
+                    if rev_line == "":
                         break;
                     rev_parts = rev_line.split(' | ')
+                    # line containing committer info is malformed
+                    if len(rev_parts) < 4:
+                        continue
+
                     author = rev_parts[1]
                     date_parts = rev_parts[2].split(" ")
                     date = date_parts[0] + " " + date_parts[1]
@@ -117,7 +126,11 @@ def main():
                     date = int(time.mktime(date))*1000
                     
                     # Skip the 'Changed paths:' line and start reading in the changed filenames.
-                    file_handle.readline()
+                    nextLine = file_handle.readline()
+                    # malformed log
+                    if nextLine.lower()[:14] != "changed paths:":
+                        continue;
+                    commits += 1
                     path = file_handle.readline()
                     while len(path) > 1:
                         ch_path = None
@@ -131,6 +144,8 @@ def main():
                     
                 line = file_handle.readline()
             file_handle.close()
+
+            print "Parsed %i commits" % ( commits )
             
             # Generate standard event xml file from event_list.
             create_event_xml(event_list, log_file, opts.output_log)
@@ -139,6 +154,7 @@ def main():
         
     if opts.cvs_log:
         log_file = opts.cvs_log
+        print "Parsing CVS log..."
         
         # Check to be sure the specified log path exists.
         if os.path.exists(log_file):
@@ -179,6 +195,7 @@ def main():
         
     if opts.vss_log:
         log_file = opts.vss_log
+        print "Parsing VSS log..."
         
         if os.path.exists(log_file):
             event_list = []
@@ -211,6 +228,7 @@ def main():
         
     if opts.starteam_log:
         log_file = opts.starteam_log
+        print "Parsing starteam log..."
         
         if os.path.exists(log_file):
             import re
@@ -253,6 +271,7 @@ def main():
 
     if opts.wikiswarm_log:
         log_file = opts.wikiswarm_log
+        print "Parsing wikiswarm log..."
         
         # Check to be sure the specified log path exists.
         if os.path.exists(log_file):
@@ -279,6 +298,7 @@ def main():
         # author: Stefan Scherfke
         # contact: stefan.scherfke at uni-oldenburg.de
         log_file = opts.mercurial_log
+        print "Parsing mercurial log..."
         
         if os.path.exists(log_file):
             event_list = []
@@ -308,6 +328,7 @@ def main():
 
     if opts.darcs_log:
         log_file = opts.darcs_log
+        print "Parsing darcs log..."
 
         if os.path.exists(log_file):
             event_list = []
@@ -342,6 +363,7 @@ def main():
         
     if opts.perforce_path:
         import re
+        print "Parsing perforce log..."
         
         event_list = []
         changelists = run_marshal('p4 -G changelists "' + opts.perforce_path + '"')
@@ -386,6 +408,8 @@ def create_event_xml(events, base_log, output_log=None):
     # If the user specified an output log file, then use that.
     if output_log:
         xml_path = output_log
+
+    print "Generating XML from %i events..." % ( len( events ) )
             
     # Create new empty xml file.
     xml_handle = open(xml_path,  'w')
